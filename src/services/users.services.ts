@@ -13,15 +13,19 @@ class UsersService {
   private signAccessToken(user_id: string) {
     return signToken({
       payload: { user_id, token_type: TokenType.AccessToken },
-      options: { expiresIn: process.env.ACCESS_TOKEN_EXPIRE_IN }
+      options: { expiresIn: process.env.ACCESS_TOKEN_EXPIRE_IN as string }
     })
   }
   //hàm nhận vào user_id và bỏ vào payload để tạo refresh_token
   private signRefreshToken(user_id: string) {
     return signToken({
       payload: { user_id, token_type: TokenType.RefreshToken },
-      options: { expiresIn: process.env.REFRESH_TOKEN_EXPIRE_IN }
+      options: { expiresIn: process.env.REFRESH_TOKEN_EXPIRE_IN as string }
     })
+  }
+  //hàm ký acces_token và refresh_token
+  private signAcessAndRefreshToken(user_id: string) {
+    return Promise.all([this.signAccessToken(user_id), this.signRefreshToken(user_id)])
   }
 
   async checkEmailExist(email: string) {
@@ -38,11 +42,12 @@ class UsersService {
       })
     )
     const user_id = result.insertedId.toString() //lấy ID để mã hóa thành token đổi cho user khi user gửi lên server cái mã token thì mình check trên server đúng token thì cho data
-    const [access_token, refresh_token] = await Promise.all([
-      this.signAccessToken(user_id),
-      this.signRefreshToken(user_id)
-    ])
-    //do thằng promise.all trả về 1 mảng nên phải dùng destructuring để lấy ra 2 cái token
+    const [access_token, refresh_token] = await this.signAcessAndRefreshToken(user_id)
+    return { access_token, refresh_token }
+  }
+
+  async login(user_id: string) {
+    const [access_token, refresh_token] = await this.signAcessAndRefreshToken(user_id)
     return { access_token, refresh_token }
   }
 }

@@ -5,37 +5,27 @@ import unsersService from '~/services/users.services'
 import { ParamsDictionary } from 'express-serve-static-core'
 import { RegisterReqBody } from '~/models/requests/User.requests'
 
-export const loginController = (req: Request, res: Response) => {
-  const { email, password } = req.body
-  if (email === 'test@gmail.com' && password === '123456')
-    return res.json({
-      message: 'login successfully',
-      result: [
-        { name: 'Điệp', yob: 1999 },
-        { name: 'Hùng', yob: 2003 },
-        { name: 'Được', yob: 1994 }
-      ]
-    })
-  return res.status(400).json({
-    error: 'login faied'
+export const loginController = async (req: Request, res: Response) => {
+  //lấy user_id từ user của req
+  const { user }: any = req
+  const user_id = user._id //object id của user
+  //dùng user_id do01 tạo access_token và fresh_token
+  const result = await unsersService.login(user_id.toString())
+  //res về access_token và fresh_token cho client
+  res.json({
+    message: 'Đăng nhập thành công',
+    data: result
   })
 }
 
 export const registerController = async (req: Request<ParamsDictionary, any, RegisterReqBody>, res: Response) => {
   //body đang là any nên phải ép nhập theo những kiểu dữ liệu mình muốn
   //=> tạo trong models 1 interface để định nghĩa kiểu dữ liệu tên requests (để định nghĩa kiểu dữ liệu cho req.body)
+  //lưu vào database
+  const result = await unsersService.register(req.body)
 
-  try {
-    //lưu vào database
-    const result = await unsersService.register(req.body)
-    return res.json({
-      message: 'Đăng ký thành công',
-      data: result
-    })
-  } catch (error) {
-    res.status(400).json({
-      message: 'Đăng ký thất bại',
-      error
-    })
-  }
+  return res.json({
+    message: 'Đăng ký thành công',
+    data: result
+  })
 }

@@ -1,5 +1,6 @@
 import jwt, { SignOptions } from 'jsonwebtoken'
-
+import { config } from 'dotenv'
+config()
 // jwt.sign(payload, secretOrPrivateKey, [options, callback]) : 1 chữ kí bao gồm
 //payload: user_id, ngày hết hạn, token-type(access_token, refresh_token),
 //secretOrPrivateKey: chuỗi mật khẩu bí mật để mã hóa
@@ -19,7 +20,9 @@ export const signToken = ({
   //biến thành object cho lúc truyền mình biết thứ tự truyền vào
   return new Promise<string>((resolve, reject) => {
     jwt.sign(payload, privateKey, options, (error, token) => {
-      if (error) throw reject(error)
+      if (error) {
+        throw reject(error)
+      }
       resolve(token as string)
     })
   })
