@@ -1,11 +1,12 @@
 import User from '~/models/schemas/User.schema'
 import databaseService from './database.services'
-import { register } from 'module'
 import { RegisterReqBody } from '~/models/requests/User.requests'
 import { hashPassword } from '~/utils/crypto'
 import { signToken } from '~/utils/jwt'
 import { TokenType } from '~/constants/enums'
 import { config } from 'dotenv'
+import RefreshToken from '~/models/schemas/RefreshToken.schema'
+import { ObjectId } from 'mongodb'
 config()
 
 class UsersService {
@@ -43,11 +44,18 @@ class UsersService {
     )
     const user_id = result.insertedId.toString() //lấy ID để mã hóa thành token đổi cho user khi user gửi lên server cái mã token thì mình check trên server đúng token thì cho data
     const [access_token, refresh_token] = await this.signAcessAndRefreshToken(user_id)
+    //lưu refresh_token vào database
+    await databaseService.refreshTokens.insertOne(
+      new RefreshToken({ user_id: new ObjectId(user_id), token: refresh_token })
+    )
     return { access_token, refresh_token }
   }
 
   async login(user_id: string) {
     const [access_token, refresh_token] = await this.signAcessAndRefreshToken(user_id)
+    await databaseService.refreshTokens.insertOne(
+      new RefreshToken({ user_id: new ObjectId(user_id), token: refresh_token })
+    )
     return { access_token, refresh_token }
   }
 }

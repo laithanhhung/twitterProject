@@ -1,6 +1,7 @@
 import { MongoClient, ServerApiVersion, Db, Collection } from 'mongodb'
 import { config } from 'dotenv' //để đọc các biến môi trường từ file .env từ thư viện dotenv
 import User from '~/models/schemas/User.schema'
+import RefreshToken from '~/models/schemas/RefreshToken.schema'
 config() //đọc file .env
 const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@tweetprojectk18f3.zsbm40o.mongodb.net/?retryWrites=true&w=majority`
 
@@ -23,6 +24,10 @@ class DatabaseService {
   get users(): Collection<User> {
     //chuyển Document thành User
     return this.db.collection(process.env.DB_USERS_COLLECTION as string)
+  }
+  get refreshTokens(): Collection<RefreshToken> {
+    //chuyển Document thành User
+    return this.db.collection(process.env.DB_REFRESH_TOKENS_COLLECTION as string)
   }
 }
 

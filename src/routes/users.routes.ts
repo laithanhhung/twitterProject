@@ -5,7 +5,7 @@ import { loginController, registerController } from '../controllers/users.contro
 import { error } from 'console'
 import { wrapAsync } from '~/utils/handlers'
 
-userRouter.get('/login', loginValidator, loginController) //đăng nhập
+userRouter.get('/login', loginValidator, wrapAsync(loginController)) //đăng nhập
 /*
 des: đăng nhập
 path: /users/login
