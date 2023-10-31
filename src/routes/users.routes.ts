@@ -3,15 +3,20 @@ const usersRouter = Router() //tạo ra 1 cái router
 import {
   accessTokenValidator,
   emailVerifyTokenValidator,
+  forgotPasswordValidator,
   loginValidator,
   refreshTokenValidator,
-  registerValidator
+  registerValidator,
+  verifyForgotPasswordTokenValidator
 } from '../middlewares/users.middlewares'
 import {
   emailVerifyTokenValidatorController,
+  forgotPasswordController,
   loginController,
   logoutController,
-  registerController
+  registerController,
+  resendEmailVerifyController,
+  verifyForgotPasswordTokenController
 } from '../controllers/users.controllers'
 import { wrapAsync } from '~/utils/handlers'
 
@@ -62,4 +67,37 @@ body: {email_verify_token: string}
 */
 usersRouter.post('/verify-email', emailVerifyTokenValidator, wrapAsync(emailVerifyTokenValidatorController))
 
+/*
+des: resend email verify token
+khi email thất lạc hoặc hết hạn thì người dùng có nhu cầu resend lại email verify token
+path: /users/resend-verify-email
+method: post
+header: {Authorization: Bearer <access_token>}//đăng nhập mới dc resend
+body: {}
+*/
+usersRouter.post('/resend-verify-email', accessTokenValidator, wrapAsync(resendEmailVerifyController))
+
+/*
+des: khi ng dùng quên mk, họ gửi email để xin mình tạo cho họ forgot_password_token
+path: /users/forgot-password
+method: post
+body: {email: string}
+*/
+usersRouter.post('/forgot-password', forgotPasswordValidator, wrapAsync(forgotPasswordController))
+
+/*
+des: khi ng dùng nhấp vào link trong email để reset mk
+họ sẽ gui63 1 req kèm theo forgot_password_token lên server
+server sẽ kiểm tra forgot_password_token có hợp lệ hay không
+sau đó chuyển hướng họ đén trang reset password
+path: /users/verify-forgot-password
+method: post
+body: {forgot_password_token: string}
+*/
+
+usersRouter.post(
+  '/verify-forgot-password',
+  verifyForgotPasswordTokenValidator,
+  wrapAsync(verifyForgotPasswordTokenController)
+)
 export default usersRouter //public ra để index.ts sử dụng
