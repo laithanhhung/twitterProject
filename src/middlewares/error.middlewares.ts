@@ -9,7 +9,7 @@ export const defaulltErrorHandler = (err: any, req: Request, res: Response, next
     return res.status(err.status).json(omit(err, ['status']))
   }
   //nếu mà lỗi xuống dc đây là lỗi mặc định
-  //set name, stask, message về enumerable: true để nó có thể lấy được
+  //Error gồm: set name, stask, message về enumerable: true để nó có thể lấy được
   Object.getOwnPropertyNames(err).forEach((key) => {
     Object.defineProperty(err, key, { enumerable: true }) //chạy foreach để đổi key trong err thành enumerable:true để nó có thể lấy được
   })

@@ -196,6 +196,7 @@ export const accessTokenValidator = validate(
                 status: HTTP_STATUS.UNAUTHORIZED //401
               })
             }
+
             try {
               //nếu có accessToken thì verify AccessToken
               const decoded_authorization = await verifyToken({ token: accessToken })

@@ -11,7 +11,7 @@ export interface RegisterReqBody {
 
 export interface LoginReqBody {
   email: string
-  passward: string
+  password: string
 }
 
 export interface LogoutReqBody {
