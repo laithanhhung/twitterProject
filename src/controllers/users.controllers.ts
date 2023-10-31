@@ -2,9 +2,13 @@ import { Request, Response } from 'express'
 import User from '~/models/schemas/User.schema'
 import usersService from '~/services/users.services'
 import { ParamsDictionary } from 'express-serve-static-core'
-import { LoginReqBody, LogoutReqBody, RegisterReqBody } from '~/models/requests/User.requests'
+import { LoginReqBody, LogoutReqBody, RegisterReqBody, TokenPayload } from '~/models/requests/User.requests'
 import { ObjectId } from 'mongodb'
 import { USERS_MESSAGES } from '~/constants/messages'
+import databaseService from '~/services/database.services'
+import { ErrorWithStatus } from '~/models/Errors'
+import HTTP_STATUS from '~/constants/httpStatus'
+import { UserVerifyStatus } from '~/constants/enums'
 
 export const loginController = async (req: Request<ParamsDictionary, any, LoginReqBody>, res: Response) => {
   //lấy user_id từ user của req
@@ -36,4 +40,39 @@ export const logoutController = async (req: Request<ParamsDictionary, any, Logou
   //logout sẽ nhận refresh_token và xóa
   const result = await usersService.logout(refresh_token)
   return res.json(result)
+}
+
+export const emailVerifyTokenValidatorController = async (req: Request, res: Response) => {
+  // nếu mà code vào được đây nghĩa là email_verify_token hợp lệ
+  // và mình đã lấy dc decoded_email_verify_token(payload)
+  const { user_id } = req.decoded_email_verify_token as TokenPayload
+  //dựa vào user_id để tìm user và xem thử nó đã verify chưa ?
+  const user = await databaseService.users.findOne({ _id: new ObjectId(user_id) })
+  if (user === null) {
+    throw new ErrorWithStatus({
+      message: USERS_MESSAGES.USER_NOT_FOUND,
+      status: HTTP_STATUS.NOT_FOUND //404
+    })
+  }
+
+  if (user.verify === UserVerifyStatus.Banned) {
+    throw new ErrorWithStatus({
+      message: USERS_MESSAGES.USER_BANNED,
+      status: HTTP_STATUS.FORBIDDEN //403
+    })
+  }
+
+  if (user.verify === UserVerifyStatus.Verified && user.email_verify_token === '') {
+    return res.json({
+      message: USERS_MESSAGES.EMAIL_ALREADY_VERIFIED_BEFORE
+    })
+  }
+
+  //nếu mà xuống dc đây nghĩa là user chưa verify
+  //mình sẽ update lại user đó
+  const result = await usersService.verifyEmail(user_id)
+  return res.json({
+    message: USERS_MESSAGES.VERIFY_EMAIL_SUCCESS,
+    result
+  })
 }

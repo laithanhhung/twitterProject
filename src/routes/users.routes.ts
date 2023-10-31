@@ -2,11 +2,17 @@ import { Router } from 'express'
 const usersRouter = Router() //tạo ra 1 cái router
 import {
   accessTokenValidator,
+  emailVerifyTokenValidator,
   loginValidator,
   refreshTokenValidator,
   registerValidator
 } from '../middlewares/users.middlewares'
-import { loginController, logoutController, registerController } from '../controllers/users.controllers'
+import {
+  emailVerifyTokenValidatorController,
+  loginController,
+  logoutController,
+  registerController
+} from '../controllers/users.controllers'
 import { wrapAsync } from '~/utils/handlers'
 
 usersRouter.get('/login', loginValidator, wrapAsync(loginController)) //đăng nhập
@@ -41,5 +47,19 @@ usersRouter.post('/register', registerValidator, wrapAsync(registerController))
   body: {refresh_token: string}
   */
 usersRouter.post('/logout', accessTokenValidator, refreshTokenValidator, wrapAsync(logoutController))
+
+/*
+des: veridy email
+khi nguồi dùng đăng ký họ sẽ nhan765 dc mail có link dạng
+http://localhost:3000/users/verify-email?token=<email_verify_token>
+nếu mà em nhấp vào link thì sẽ tạo ra req gửi lên email_verify_token lên server
+server kiểm tra email_verify_token có hợp lệ hay không
+thì từ decoded_email_verigy_token lấy user_id
+và vào user_id  đó để update email_verify_token thành '', verify = 1, update_at
+path: /users/verify-email
+method: post
+body: {email_verify_token: string}
+*/
+usersRouter.post('/verify-email', emailVerifyTokenValidator, wrapAsync(emailVerifyTokenValidatorController))
 
 export default usersRouter //public ra để index.ts sử dụng

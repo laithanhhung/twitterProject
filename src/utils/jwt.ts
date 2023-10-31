@@ -1,6 +1,7 @@
 import jwt, { SignOptions } from 'jsonwebtoken'
 import { config } from 'dotenv'
 import { TokenPayload } from '~/models/requests/User.requests'
+import databaseService from '~/services/database.services'
 config()
 // jwt.sign(payload, secretOrPrivateKey, [options, callback]) : 1 chữ kí bao gồm
 //payload: user_id, ngày hết hạn, token-type(access_token, refresh_token),
@@ -11,11 +12,11 @@ config()
 //hàm nhận vào payload, privateKey, options từ đó ký tên
 export const signToken = ({
   payload,
-  privateKey = process.env.JWT_SECRET as string,
+  privateKey,
   options = { algorithm: 'HS256' }
 }: {
   payload: string | object | Buffer
-  privateKey?: string //thêm dấu ? vì do mình có thêm key mặc định trong .env
+  privateKey: string
   options: SignOptions
 }) => {
   //biến thành object cho lúc truyền mình biết thứ tự truyền vào
@@ -30,13 +31,7 @@ export const signToken = ({
 }
 
 //hàm nhận vào Token, và secretOrPublickKey
-export const verifyToken = ({
-  token,
-  secretOrPublicKey = process.env.JWT_SECRET as string
-}: {
-  token: string
-  secretOrPublicKey?: string
-}) => {
+export const verifyToken = ({ token, secretOrPublicKey }: { token: string; secretOrPublicKey: string }) => {
   //trả về JwtPayload(thông tin người gữi req) nếu token hợp lệ
   return new Promise<TokenPayload>((resolve, reject) => {
     //method này sẽ verify token, nếu token hợp lệ thì nó sẽ trả về payload
