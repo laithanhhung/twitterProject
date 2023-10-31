@@ -4,14 +4,17 @@
 //nhét email, password vào trong req.body
 //và gửi lên server
 
-import { Request, Response, NextFunction } from 'express' //sau khi thêm kiểu dữ liệu thì sẽ tự import interface(: định nghĩa cho 1 object) do express cung cấp
-import { check, checkSchema } from 'express-validator'
+import { checkSchema } from 'express-validator'
+import { Request } from 'express-validator/src/base'
+import { JsonWebTokenError } from 'jsonwebtoken'
+import { capitalize } from 'lodash'
+import HTTP_STATUS from '~/constants/httpStatus'
 import { USERS_MESSAGES } from '~/constants/messages'
 import { ErrorWithStatus } from '~/models/Errors'
-import User from '~/models/schemas/User.schema'
 import databaseService from '~/services/database.services'
-import unsersService from '~/services/users.services'
+import usersService from '~/services/users.services'
 import { hashPassword } from '~/utils/crypto'
+import { verifyToken } from '~/utils/jwt'
 import { validate } from '~/utils/validation'
 
 export const loginValidator = validate(
@@ -94,7 +97,7 @@ export const registerValidator = validate(
       trim: true,
       custom: {
         options: async (value, { req }) => {
-          const isExist = await unsersService.checkEmailExist(value)
+          const isExist = await usersService.checkEmailExist(value)
           if (isExist) {
             throw new Error(USERS_MESSAGES.EMAIL_ALREADY_EXISTS)
           }
@@ -174,3 +177,87 @@ export const registerValidator = validate(
     }
   })
 )
+
+export const accessTokenValidator = validate(
+  checkSchema(
+    {
+      Authorization: {
+        trim: true,
+        notEmpty: {
+          errorMessage: USERS_MESSAGES.ACCESS_TOKEN_IS_REQUIRED
+        },
+        custom: {
+          options: async (value: String, { req }) => {
+            const accessToken = value.split(' ')[1] //Bearer <access_token>
+            //nếu không có accessToken thì ném lỗi 401
+            if (!accessToken) {
+              throw new ErrorWithStatus({
+                message: USERS_MESSAGES.ACCESS_TOKEN_IS_REQUIRED,
+                status: HTTP_STATUS.UNAUTHORIZED //401
+              })
+            }
+            try {
+              //nếu có accessToken thì verify AccessToken
+              const decoded_authorization = await verifyToken({ token: accessToken })
+              //lấy ra decoded_authorization(payload), lưu vào req để dùng dần
+              ;(req as Request).decoded_authorization = decoded_authorization
+            } catch (error) {
+              throw new ErrorWithStatus({
+                message: capitalize((error as JsonWebTokenError).message), //Chuẩn hóa message thành viết hoa chữ đầu
+                status: HTTP_STATUS.UNAUTHORIZED //401
+              })
+            }
+            return true
+          }
+        }
+      }
+    },
+    ['headers']
+  )
+)
+
+export const refreshTokenValidator = validate(
+  checkSchema(
+    {
+      refresh_token: {
+        trim: true,
+        notEmpty: {
+          errorMessage: USERS_MESSAGES.REFRESH_TOKEN_IS_REQUIRED
+        },
+        custom: {
+          options: async (value: string, { req }) => {
+            //verify refresh_token để lấy decoded_refresh_token
+            try {
+              const [decoded_refresh_token, refresh_token] = await Promise.all([
+                verifyToken({
+                  token: value
+                }),
+                databaseService.refreshTokens.findOne({
+                  token: value
+                })
+              ])
+
+              if (refresh_token === null) {
+                throw new ErrorWithStatus({
+                  message: USERS_MESSAGES.USED_REFRESH_TOKEN_OR_NOT_EXIST,
+                  status: HTTP_STATUS.UNAUTHORIZED //401
+                })
+              }
+              ;(req as Request).decoded_refresh_token = decoded_refresh_token
+            } catch (error) {
+              if (error instanceof JsonWebTokenError) {
+                throw new ErrorWithStatus({
+                  message: capitalize((error as JsonWebTokenError).message),
+                  status: HTTP_STATUS.UNAUTHORIZED //401
+                })
+              }
+              throw error
+            }
+            return true
+          }
+        }
+      }
+    },
+    ['body']
+  )
+) //trick nhỏ, mình biết nó từ body nen mình chỉ check body thôi => nhanh

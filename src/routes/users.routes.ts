@@ -1,11 +1,15 @@
 import { Router } from 'express'
-const userRouter = Router() //tạo ra 1 cái router
-import { loginValidator, registerValidator } from '../middlewares/users.middlewares'
-import { loginController, registerController } from '../controllers/users.controllers'
-import { error } from 'console'
+const usersRouter = Router() //tạo ra 1 cái router
+import {
+  accessTokenValidator,
+  loginValidator,
+  refreshTokenValidator,
+  registerValidator
+} from '../middlewares/users.middlewares'
+import { loginController, logoutController, registerController } from '../controllers/users.controllers'
 import { wrapAsync } from '~/utils/handlers'
 
-userRouter.get('/login', loginValidator, wrapAsync(loginController)) //đăng nhập
+usersRouter.get('/login', loginValidator, wrapAsync(loginController)) //đăng nhập
 /*
 des: đăng nhập
 path: /users/login
@@ -26,7 +30,16 @@ body:{
 }
 //quy ước trong mongo biến thì dùng snake_case, trong js thì dùng camelCase
 */
-userRouter.post('/register', registerValidator, wrapAsync(registerController))
+usersRouter.post('/register', registerValidator, wrapAsync(registerController))
 //register không phải get mà là post vì nó sẽ gửi dữ liệu lên server nhiều hơn
 
-export default userRouter //public ra để index.ts sử dụng
+/*
+  des: lougout
+  path: /users/logout
+  method: POST
+  Header: {Authorization: Bearer <access_token>} -> để xác định user nào đang đăng nhập
+  body: {refresh_token: string}
+  */
+usersRouter.post('/logout', accessTokenValidator, refreshTokenValidator, wrapAsync(logoutController))
+
+export default usersRouter //public ra để index.ts sử dụng

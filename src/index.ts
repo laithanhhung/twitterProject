@@ -4,9 +4,9 @@ import databaseService from './services/database.services'
 import { defaulltErrorHandler } from './middlewares/error.middlewares'
 const app = express()
 const port = 3000
-app.use(express.json()) //middleware
+app.use(express.json())
 databaseService.connect() //khi chạy thì sẽ bắt đầu kết nối đến database
-//localhost:3000/
+
 app.get('/', (req, res) => {
   res.send('hello world')
 })

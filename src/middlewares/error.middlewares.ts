@@ -6,7 +6,7 @@ import { ErrorWithStatus } from '~/models/Errors'
 export const defaulltErrorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
   //lỗi từ các nơi sẽ dồn về đây
   if (err instanceof ErrorWithStatus) {
-    res.status(err.status).json(omit(err, ['status']))
+    return res.status(err.status).json(omit(err, ['status']))
   }
   //nếu mà lỗi xuống dc đây là lỗi mặc định
   //set name, stask, message về enumerable: true để nó có thể lấy được

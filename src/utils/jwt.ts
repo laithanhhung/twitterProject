@@ -1,5 +1,6 @@
 import jwt, { SignOptions } from 'jsonwebtoken'
 import { config } from 'dotenv'
+import { TokenPayload } from '~/models/requests/User.requests'
 config()
 // jwt.sign(payload, secretOrPrivateKey, [options, callback]) : 1 chữ kí bao gồm
 //payload: user_id, ngày hết hạn, token-type(access_token, refresh_token),
@@ -28,4 +29,24 @@ export const signToken = ({
   })
 }
 
-//hàm tạo refresh_token
+//hàm nhận vào Token, và secretOrPublickKey
+export const verifyToken = ({
+  token,
+  secretOrPublicKey = process.env.JWT_SECRET as string
+}: {
+  token: string
+  secretOrPublicKey?: string
+}) => {
+  //trả về JwtPayload(thông tin người gữi req) nếu token hợp lệ
+  return new Promise<TokenPayload>((resolve, reject) => {
+    //method này sẽ verify token, nếu token hợp lệ thì nó sẽ trả về payload
+    //nếu token không hợp lệ thì nó sẽ throw error
+    //secretOrPublicKey dùng để verify token
+    //nếu token được tạo ra bằng secret|PublicKey thì ta dùng secret|PublicKey key để verify
+    //từ đó biết rằng access_token được tạo bởi chính server
+    jwt.verify(token, secretOrPublicKey, (error, decoded) => {
+      if (error) throw reject(error)
+      resolve(decoded as TokenPayload)
+    })
+  })
+}
