@@ -6,6 +6,7 @@ import {
   LoginReqBody,
   LogoutReqBody,
   RegisterReqBody,
+  ResetPasswordReqBody,
   TokenPayload,
   VerifyEmailReqBody
 } from '~/models/requests/User.requests'
@@ -135,5 +136,30 @@ export const forgotPasswordController = async (req: Request, res: Response) => {
 export const verifyForgotPasswordTokenController = async (req: Request, res: Response) => {
   return res.json({
     message: USERS_MESSAGES.CHECK_FORGOT_PASSWORD_TOKEN_SUCCESS
+  })
+}
+
+export const resetPasswordController = async (
+  req: Request<ParamsDictionary, any, ResetPasswordReqBody>,
+  res: Response
+) => {
+  //muốn đổi mk thì cần user_id và password mới
+  //lấy user_id từ user của req
+  const { user_id } = req.decoded_forgot_password_token as TokenPayload
+  //lấy password mới từ req.body
+  const { password } = req.body
+  //cập nhật
+  const result = await usersService.resetPassword({ user_id, password })
+  return res.json(result)
+}
+
+export const getMeController = async (req: Request, res: Response) => {
+  //muốn lấy profile của mình thì có user_id của mình
+  const { user_id } = req.decoded_authorization as TokenPayload
+  // dùng cái user_id này để tìm user trong database
+  const user = await usersService.getMe(user_id)
+  return res.json({
+    message: USERS_MESSAGES.GET_ME_SUCCESS,
+    result: user
   })
 }
