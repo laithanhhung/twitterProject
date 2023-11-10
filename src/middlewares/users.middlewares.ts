@@ -12,6 +12,7 @@ import { ObjectId } from 'mongodb'
 import { UserVerifyStatus } from '~/constants/enums'
 import HTTP_STATUS from '~/constants/httpStatus'
 import { USERS_MESSAGES } from '~/constants/messages'
+import { REGEX_USERNAME } from '~/constants/regexs'
 import { ErrorWithStatus } from '~/models/Errors'
 import { TokenPayload } from '~/models/requests/User.requests'
 import databaseService from '~/services/database.services'
@@ -120,6 +121,31 @@ const imageSchema: ParamSchema = {
     errorMessage: USERS_MESSAGES.IMAGE_LENGTH_MUST_BE_FROM_1_TO_400
   }
 }
+const userIdSchema: ParamSchema = {
+  custom: {
+    options: async (value: string, { req }) => {
+      //check value có phải objectId hay không?
+      if (!ObjectId.isValid(value)) {
+        throw new ErrorWithStatus({
+          message: USERS_MESSAGES.INVALID_user_id,
+          status: HTTP_STATUS.NOT_FOUND
+        })
+      }
+      //đổi tên biến thành user luôn cho phù hợp
+      const user = await databaseService.users.findOne({
+        _id: new ObjectId(value)
+      })
+      if (user === null) {
+        throw new ErrorWithStatus({
+          message: USERS_MESSAGES.USER_NOT_FOUND,
+          status: HTTP_STATUS.NOT_FOUND
+        })
+      }
+      //nếu vướt qua hết if thì return true
+      return true
+    }
+  }
+}
 
 export const loginValidator = validate(
   checkSchema({
@@ -171,7 +197,6 @@ export const loginValidator = validate(
     }
   })
 )
-
 export const registerValidator = validate(
   //dùng validate của validation.ts trogn utils
   checkSchema(
@@ -202,7 +227,6 @@ export const registerValidator = validate(
     ['body']
   )
 )
-
 export const accessTokenValidator = validate(
   checkSchema(
     {
@@ -241,7 +265,6 @@ export const accessTokenValidator = validate(
     ['headers']
   )
 )
-
 export const refreshTokenValidator = validate(
   checkSchema(
     {
@@ -285,7 +308,6 @@ export const refreshTokenValidator = validate(
     ['body']
   )
 )
-
 export const emailVerifyTokenValidator = validate(
   checkSchema(
     {
@@ -325,7 +347,6 @@ export const emailVerifyTokenValidator = validate(
     ['body']
   )
 )
-
 export const forgotPasswordValidator = validate(
   checkSchema({
     email: {
@@ -352,7 +373,6 @@ export const forgotPasswordValidator = validate(
     }
   })
 )
-
 export const verifyForgotPasswordTokenValidator = validate(
   checkSchema(
     {
@@ -407,7 +427,6 @@ export const verifyForgotPasswordTokenValidator = validate(
     ['body']
   )
 )
-
 export const resetPasswordValidator = validate(
   checkSchema(
     {
@@ -417,7 +436,6 @@ export const resetPasswordValidator = validate(
     ['body']
   )
 )
-
 export const verifiedUserValidator = (req: Request, res: Response, next: NextFunction) => {
   const { verify } = req.decoded_authorization as TokenPayload
   if (verify !== UserVerifyStatus.Verified) {
@@ -430,7 +448,6 @@ export const verifiedUserValidator = (req: Request, res: Response, next: NextFun
   }
   next()
 }
-
 export const updateMeValidator = validate(
   checkSchema(
     {
@@ -492,19 +509,82 @@ export const updateMeValidator = validate(
       username: {
         optional: true,
         isString: {
-          errorMessage: USERS_MESSAGES.USERNAME_MUST_BE_A_STRING ////messages.ts thêm USERNAME_MUST_BE_A_STRING: 'Username must be a string'
+          errorMessage: USERS_MESSAGES.USERNAME_MUST_BE_A_STRING
         },
         trim: true,
-        isLength: {
-          options: {
-            min: 1,
-            max: 50
-          },
-          errorMessage: USERS_MESSAGES.USERNAME_LENGTH_MUST_BE_LESS_THAN_50 //messages.ts thêm USERNAME_LENGTH_MUST_BE_LESS_THAN_50: 'Username length must be less than 50'
+        //bỏ isLength,vì ta có regex rồi
+        custom: {
+          options: async (value, { req }) => {
+            if (REGEX_USERNAME.test(value) === false) {
+              throw new Error(USERS_MESSAGES.USERNAME_IS_INVALID)
+            }
+            //tìm user bằng username
+            const user = await databaseService.users.findOne({
+              username: value
+            })
+            //nếu username đã tồn tại thì throw error
+            if (user) {
+              throw new Error(USERS_MESSAGES.USERNAME_ALREADY_EXISTS)
+            }
+          }
         }
       },
       avatar: imageSchema,
       cover_photo: imageSchema
+    },
+    ['body']
+  )
+)
+export const followValidator = validate(
+  checkSchema(
+    {
+      followed_user_id: userIdSchema
+    },
+    ['body']
+  )
+)
+export const unfollowValidator = validate(
+  checkSchema(
+    {
+      user_id: userIdSchema
+    },
+    ['params']
+  )
+)
+export const changePasswordValidator = validate(
+  checkSchema(
+    {
+      old_password: {
+        ...passwordSchema,
+        custom: {
+          options: async (value, { req }) => {
+            //sau khi qua accestokenValidator thì ta đã có req.decoded_authorization chứa user_id
+            //lấy user_id đó để tìm user trong
+            const { user_id } = req.decoded_authorization as TokenPayload
+            const user = await databaseService.users.findOne({
+              _id: new ObjectId(user_id)
+            })
+            //nếu không có user thì throw error
+            if (!user) {
+              throw new ErrorWithStatus({
+                message: USERS_MESSAGES.USER_NOT_FOUND,
+                status: HTTP_STATUS.UNAUTHORIZED //401
+              })
+            }
+            //nếu có user thì kiểm tra xem password có đúng không
+            const { password } = user
+            const isMatch = password === hashPassword(value)
+            if (!isMatch) {
+              throw new ErrorWithStatus({
+                message: USERS_MESSAGES.OLD_PASSWORD_NOT_MATCH, //trong messages.ts thêm OLD_PASSWORD_NOT_MATCH: 'Old password not match'
+                status: HTTP_STATUS.UNAUTHORIZED //401
+              })
+            }
+          }
+        }
+      },
+      password: passwordSchema,
+      confirm_password: confirmedPasswordSchema
     },
     ['body']
   )
